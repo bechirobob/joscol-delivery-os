@@ -1,0 +1,57 @@
+services:
+  - type: web
+    name: joscol-delivery-os
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: JOSCOL_STORAGE_ADAPTER
+        value: postgres
+      - key: JOSCOL_DISABLE_DEMO_LOGIN
+        value: true
+      - key: JOSCOL_ALLOW_HEADER_AUTH
+        value: false
+      - key: JOSCOL_ALLOW_PRODUCTION_RESET
+        value: false
+      - key: JOSCOL_ALLOW_PRODUCTION_EXPORT
+        value: false
+      - key: JOSCOL_SESSION_SECRET
+        sync: false
+      - key: JOSCOL_SUPABASE_URL
+        sync: false
+      - key: JOSCOL_SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: JOSCOL_DISPATCH_EMAIL
+        sync: false
+      - key: JOSCOL_DISPATCH_PASSWORD_SHA256
+        sync: false
+      - key: JOSCOL_RIDER_EMAIL
+        sync: false
+      - key: JOSCOL_RIDER_PASSWORD_SHA256
+        sync: false
+      - key: JOSCOL_OPS_EMAIL
+        sync: false
+      - key: JOSCOL_OPS_PASSWORD_SHA256
+        sync: false
+      - key: JOSCOL_PUBLIC_URL
+        sync: false
+      - key: JOSCOL_PAYSTACK_SECRET_KEY
+        sync: false
+      - key: JOSCOL_RESEND_API_KEY
+        sync: false
+      - key: JOSCOL_NOTIFY_EMAIL_TO
+        sync: false
+      - key: JOSCOL_WHATSAPP_TOKEN
+        sync: false
+      - key: JOSCOL_WHATSAPP_PHONE_NUMBER_ID
+        sync: false

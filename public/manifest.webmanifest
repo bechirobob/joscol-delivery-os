@@ -1,0 +1,18 @@
+{
+  "name": "JOSCOL Delivery OS",
+  "short_name": "JOSCOL",
+  "description": "JOSCOL delivery operations, dispatch, rider status, and customer tracking.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f6f4",
+  "theme_color": "#c62026",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

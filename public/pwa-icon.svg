@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="JOSCOL">
+  <rect width="512" height="512" fill="#c62026"/>
+  <path d="M154 96h204v208c0 76-48 120-117 120-49 0-89-20-118-59l58-52c16 23 34 34 58 34 31 0 52-21 52-61V164H154z" fill="#fff"/>
+  <path d="M78 370h91l38 46H78zM330 370h104l-38 46H292z" fill="#f5821f"/>
+</svg>

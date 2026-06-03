@@ -1,0 +1,38 @@
+{
+  "name": "joscol-delivery-os",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "JOSCOL delivery operations system for orders, dispatch, riders, tracking, backend persistence, and future ride hailing in Malabo / Equatorial Guinea.",
+  "scripts": {
+    "api": "node server/index.js",
+    "dev": "bash scripts/dev.sh",
+    "dev:web": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "test": "npm run lint && npm run build",
+    "test:smoke": "npm run smoke:auth && npm run smoke:roles && npm run smoke:gps",
+    "test:all": "npm test && npm run test:smoke",
+    "preview": "vite preview --host 127.0.0.1",
+    "start": "node server/index.js",
+    "smoke:auth": "node scripts/smoke-auth-session.mjs",
+    "smoke:roles": "node scripts/smoke-role-separation.mjs",
+    "smoke:gps": "node scripts/smoke-location-jutsus.mjs"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "typescript": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "eslint": "latest",
+    "@eslint/js": "latest",
+    "typescript-eslint": "latest",
+    "eslint-plugin-react-hooks": "latest",
+    "eslint-plugin-react-refresh": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
+}
