@@ -6,6 +6,7 @@ type Locale = 'es' | 'en';
 type Workspace = 'customer' | 'track' | 'dispatch' | 'rider' | 'ops' | 'rides';
 type StaffRole = 'dispatch' | 'rider' | 'ops';
 type AppRoute = 'customer' | 'staff';
+type CustomerTab = 'customer' | 'track' | 'receipt';
 type OrderStatus = 'received' | 'assigned' | 'pickup' | 'transit' | 'delivered' | 'exception';
 type RiderStatus = 'available' | 'assigned' | 'busy' | 'offline';
 type Priority = 'standard' | 'urgent';
@@ -138,7 +139,7 @@ function initialRoute(): AppRoute {
 function App() {
   const [locale, setLocale] = useState<Locale>('es');
   const [appRoute, setAppRoute] = useState<AppRoute>(initialRoute);
-  const [customerTab, setCustomerTab] = useState<'customer' | 'track'>('customer');
+  const [customerTab, setCustomerTab] = useState<CustomerTab>('customer');
   const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
   const [loginForm, setLoginForm] = useState<LoginForm>({ role: 'dispatch', email: 'dispatch@joscol.local', password: '' });
   const [workspace, setWorkspace] = useState<Workspace>('customer');
@@ -230,7 +231,7 @@ function App() {
       const result = await api<{ order: Order }>('/api/orders', { method: 'POST', body: JSON.stringify(form) });
       setTrackedOrder(result.order);
       setTrackingId(result.order.id);
-      setCustomerTab('track');
+      setCustomerTab('receipt');
       setMessage(`${result.order.id} created. Customer tracking is ready.`);
       setForm({ customer: '', phone: '+240 ', pickup: '', dropoff: '', item: '', zone: 'Malabo Centro', priority: 'standard', notes: '' });
     } catch (error) {
@@ -336,16 +337,17 @@ function App() {
   );
 }
 
-function CustomerShell({ locale, customerTab, setCustomerTab, form, setForm, quote, createOrder, trackingId, setTrackingId, trackedOrder, lookupTracking, busy }: { locale: Locale; customerTab: 'customer' | 'track'; setCustomerTab: (tab: 'customer' | 'track') => void; form: OrderForm; setForm: (next: OrderForm) => void; quote: number; createOrder: (event: FormEvent) => void; trackingId: string; setTrackingId: (id: string) => void; trackedOrder?: Order; lookupTracking: () => Promise<void>; busy: boolean }) {
+function CustomerShell({ locale, customerTab, setCustomerTab, form, setForm, quote, createOrder, trackingId, setTrackingId, trackedOrder, lookupTracking, busy }: { locale: Locale; customerTab: CustomerTab; setCustomerTab: (tab: CustomerTab) => void; form: OrderForm; setForm: (next: OrderForm) => void; quote: number; createOrder: (event: FormEvent) => void; trackingId: string; setTrackingId: (id: string) => void; trackedOrder?: Order; lookupTracking: () => Promise<void>; busy: boolean }) {
   const t = copy[locale];
   return <>
     <section className="command-hero customer-hero">
       <div className="hero-copy-block"><p className="eyebrow">{t.eyebrow}</p><h1>{t.title}</h1><div className="hero-actions"><button onClick={() => setCustomerTab('customer')} type="button">{t.primary}</button><button className="ghost" onClick={() => setCustomerTab('track')} type="button">{t.secondary}</button></div></div>
-      <div className="customer-flow-card compact-card"><strong>JSC</strong><span>15–30 min</span><span>XAF</span></div>
+      <div className="customer-flow-card flow-steps" aria-label={locale === 'es' ? 'Flujo de pedido' : 'Order flow'}><strong>{locale === 'es' ? 'Cómo funciona' : 'How it works'}</strong><ol><li><span>1</span>{locale === 'es' ? 'Pide' : 'Order'}</li><li><span>2</span>{locale === 'es' ? 'Despacho asigna rider' : 'Dispatch assigns rider'}</li><li><span>3</span>{locale === 'es' ? 'Sigue la entrega' : 'Track delivery'}</li></ol><small>{locale === 'es' ? 'Pago estimado en XAF antes de enviar.' : 'XAF estimate before sending.'}</small></div>
     </section>
-    <nav className="customer-tabs" aria-label="Customer actions"><button className={customerTab === 'customer' ? 'active' : ''} onClick={() => setCustomerTab('customer')} type="button"><DeliveryIcon />{t.nav.customer}</button><button className={customerTab === 'track' ? 'active' : ''} onClick={() => setCustomerTab('track')} type="button"><PinIcon />{t.nav.track}</button></nav>
+    <nav className="customer-tabs" aria-label="Customer actions"><button className={customerTab === 'customer' ? 'active' : ''} onClick={() => setCustomerTab('customer')} type="button"><DeliveryIcon />{t.nav.customer}</button><button className={customerTab === 'track' || customerTab === 'receipt' ? 'active' : ''} onClick={() => setCustomerTab('track')} type="button"><PinIcon />{t.nav.track}</button></nav>
     <section className="module-shell">
       {customerTab === 'customer' && <CustomerModule form={form} setForm={setForm} quote={quote} createOrder={createOrder} locale={locale} busy={busy} />}
+      {customerTab === 'receipt' && <OrderReceiptModule locale={locale} order={trackedOrder} setCustomerTab={setCustomerTab} />}
       {customerTab === 'track' && <TrackingModule locale={locale} trackingId={trackingId} setTrackingId={setTrackingId} order={trackedOrder} lookupTracking={lookupTracking} busy={busy} />}
     </section>
   </>;
@@ -357,6 +359,12 @@ function StaffLoginPage({ locale, loginForm, setLoginForm, openStaff, busy }: { 
 
 function CustomerModule({ form, setForm, quote, createOrder, locale, busy }: { form: OrderForm; setForm: (next: OrderForm) => void; quote: number; createOrder: (event: FormEvent) => void; locale: Locale; busy: boolean }) {
   return <div className="workbench customer-workbench"><form className="order-sheet" onSubmit={createOrder}><p className="eyebrow">{copy[locale].orderForm}</p><h2>{locale === 'es' ? '¿Qué se entrega?' : 'What needs delivery?'}</h2><div className="route-inputs"><label>{locale === 'es' ? 'Recoger' : 'Pickup'}<input required value={form.pickup} onChange={(e) => setForm({ ...form, pickup: e.target.value })} placeholder="Restaurante / tienda / oficina" /></label><span aria-hidden="true" /><label>{locale === 'es' ? 'Entregar' : 'Dropoff'}<input required value={form.dropoff} onChange={(e) => setForm({ ...form, dropoff: e.target.value })} placeholder="Dirección de entrega" /></label></div><div className="field-grid compact-fields"><label>{locale === 'es' ? 'Cliente' : 'Customer'}<input autoComplete="name" required value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} placeholder="Claudia Nsue" /></label><label>WhatsApp<input autoComplete="tel" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+240 555 000 000" /></label><label>{locale === 'es' ? 'Pedido' : 'Item'}<input required value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} placeholder="Comida, documentos, compra..." /></label><label>{locale === 'es' ? 'Zona' : 'Zone'}<select value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })}>{zones.map((zone) => <option key={zone}>{zone}</option>)}</select></label><label>{locale === 'es' ? 'Prioridad' : 'Priority'}<select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as Priority })}><option value="standard">Standard</option><option value="urgent">Urgent</option></select></label><label>{locale === 'es' ? 'Notas' : 'Notes'}<input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Pago, referencia, instrucciones" /></label></div><div className="bottom-action"><span>{locale === 'es' ? 'Precio' : 'Price'}<strong>{quote.toLocaleString('es-GQ')} XAF</strong></span><button disabled={busy} type="submit">{locale === 'es' ? 'Enviar' : 'Send'}</button></div></form><div className="quick-jutsus"><button className="ghost" type="button" onClick={() => setForm({ ...form, pickup: 'Restaurante La Luna', item: 'Cena', zone: 'Malabo Centro' })}>La Luna</button><button className="ghost" type="button" onClick={() => setForm({ ...form, pickup: 'Supermercado Martínez', item: 'Compra grande', zone: 'Banapá', priority: 'urgent' })}>Market</button><button className="ghost" type="button" onClick={() => setForm({ ...form, pickup: 'Oficina Gepetrol', item: 'Documentos urgentes', zone: 'Malabo Centro', priority: 'urgent' })}>Docs</button></div></div>;
+}
+
+
+function OrderReceiptModule({ locale, order, setCustomerTab }: { locale: Locale; order?: Order; setCustomerTab: (tab: CustomerTab) => void }) {
+  if (!order) return <div className="workbench receipt-workbench"><p className="empty-state">{locale === 'es' ? 'Pedido creado, pero no se cargó el recibo.' : 'Order created, but the receipt did not load.'}</p><button type="button" onClick={() => setCustomerTab('track')}>{locale === 'es' ? 'Ir a tracking' : 'Go to tracking'}</button></div>;
+  return <div className="workbench receipt-workbench"><section className="receipt-panel" aria-labelledby="receipt-title"><p className="eyebrow">{locale === 'es' ? 'Pedido confirmado' : 'Order confirmed'}</p><h2 id="receipt-title">{locale === 'es' ? 'Ya está en despacho.' : 'It is now with dispatch.'}</h2><div className="receipt-id"><span>{locale === 'es' ? 'Tu código' : 'Your code'}</span><strong>{order.id}</strong></div><p>{locale === 'es' ? 'Guarda este código para seguir el pedido. La app ya cambió a confirmación; el formulario queda atrás.' : 'Save this code to track the order. The app has moved to confirmation; the form is behind you now.'}</p><div className="receipt-actions"><button type="button" onClick={() => setCustomerTab('track')}>{locale === 'es' ? 'Ver tracking completo' : 'View full tracking'}</button><button className="ghost" type="button" onClick={() => setCustomerTab('customer')}>{locale === 'es' ? 'Nuevo pedido' : 'New order'}</button></div></section><TrackingSheet locale={locale} order={order} /></div>;
 }
 
 function TrackingModule({ locale, trackingId, setTrackingId, order, lookupTracking, busy }: { locale: Locale; trackingId: string; setTrackingId: (id: string) => void; order?: Order; lookupTracking: () => Promise<void>; busy: boolean }) {

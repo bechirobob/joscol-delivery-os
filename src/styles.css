@@ -131,10 +131,12 @@ p { color: var(--muted); line-height: 1.42; }
   background: #fff;
   padding: 22px;
 }
-.customer-flow-card ol { margin: 12px 0 0; padding-left: 20px; color: var(--muted); font-weight: 800; }
-.compact-card { display: grid; gap: 10px; align-content: center; min-height: 210px; }
-.compact-card strong { font-size: clamp(2.4rem, 5vw, 3.6rem); letter-spacing: -.075em; line-height: .9; }
-.compact-card span { width: fit-content; background: var(--soft); padding: 8px 10px; font-weight: 950; color: var(--ink); }
+.customer-flow-card ol { margin: 16px 0; padding: 0; list-style: none; color: var(--ink); font-weight: 900; }
+.flow-steps { display: grid; gap: 10px; align-content: center; min-height: 210px; }
+.flow-steps strong { font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.055em; line-height: 1; }
+.flow-steps li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.flow-steps li span { display: grid; place-items: center; width: 28px; height: 28px; background: var(--ink); color: #fff; font-weight: 950; }
+.flow-steps small { color: var(--muted); font-weight: 850; }
 .staff-entry { display: block; margin-top: 18px; }
 .staff-login-page {
   display: grid;
@@ -193,7 +195,13 @@ p { color: var(--muted); line-height: 1.42; }
   box-shadow: none;
   padding: clamp(18px, 3vw, 30px);
 }
-.customer-workbench, .split-workbench { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(280px, .88fr); gap: 26px; align-items: start; }
+.customer-workbench, .split-workbench, .receipt-workbench { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(280px, .88fr); gap: 26px; align-items: start; }
+.receipt-panel { display: grid; gap: 14px; align-content: start; }
+.receipt-panel h2 { margin-bottom: 0; }
+.receipt-id { display: grid; gap: 3px; padding: 18px; background: var(--soft); border-left: 5px solid var(--brand-red); }
+.receipt-id span { color: var(--muted); font-weight: 850; }
+.receipt-id strong { color: var(--ink); font-size: clamp(2.1rem, 5vw, 3.4rem); line-height: .92; letter-spacing: -.065em; }
+.receipt-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
 .quick-jutsus { display: grid; gap: 10px; align-content: start; }
 .quick-jutsus button { min-height: 76px; text-align: left; font-size: 1.15rem; }
 .order-sheet { min-width: 0; }
@@ -300,7 +308,7 @@ input, select { width: 100%; border: 1px solid #dcdcdc; border-radius: var(--rad
 
 @media (max-width: 920px) {
   main { padding-inline: 24px; }
-  .command-hero, .customer-workbench, .split-workbench, .dispatch-board, .staff-command-head { grid-template-columns: 1fr; }
+  .command-hero, .customer-workbench, .split-workbench, .receipt-workbench, .dispatch-board, .staff-command-head { grid-template-columns: 1fr; }
   .command-hero { align-items: stretch; }
   .route-brief { border-left: 0; border-top: 1px solid var(--line); padding-left: 0; padding-top: 20px; }
 }
