@@ -90,7 +90,7 @@ const emptyState: AppState = { orders: [], riders: [], selectedOrderId: '' };
 const copy = {
   es: {
     brand: 'JOSCOL', product: 'Delivery OS',
-    nav: { customer: 'Pedir', track: 'Track', dispatch: 'Dispatch', rider: 'Rider', ops: 'Admin', rides: 'Rides' },
+    nav: { customer: 'Pedir', track: 'Seguir', dispatch: 'Despacho', rider: 'Rider', ops: 'Admin', rides: 'Rides' },
     eyebrow: 'Malabo', title: 'Entrega en minutos.',
     subtitle: '',
     primary: 'Nuevo pedido', secondary: 'Seguir pedido', activeOrders: 'Activos', avgEta: 'ETA', onlineRiders: 'Riders', revenue: 'XAF',
@@ -137,8 +137,14 @@ function initialRoute(): AppRoute {
   return 'customer';
 }
 
+function initialLocale(): Locale {
+  if (typeof window === 'undefined') return 'es';
+  const saved = window.localStorage.getItem('joscol-locale');
+  return saved === 'en' ? 'en' : 'es';
+}
+
 function App() {
-  const [locale, setLocale] = useState<Locale>('es');
+  const [locale, setLocale] = useState<Locale>(initialLocale);
   const [appRoute, setAppRoute] = useState<AppRoute>(initialRoute);
   const [customerTab, setCustomerTab] = useState<CustomerTab>('customer');
   const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
@@ -165,6 +171,11 @@ function App() {
       navigator.serviceWorker.register('/sw.js').catch(() => undefined);
     }
   }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+    window.localStorage.setItem('joscol-locale', locale);
+  }, [locale]);
 
   useEffect(() => {
     const syncRoute = () => setAppRoute(window.location.pathname.startsWith('/staff') ? 'staff' : 'customer');
