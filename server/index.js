@@ -7,7 +7,8 @@ import { existsSync, createReadStream } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 
 const PORT = Number(process.env.PORT || 8787);
-const HOST = process.env.HOST || '127.0.0.1';
+const defaultHost = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+const HOST = process.env.HOST || defaultHost;
 const ROOT = resolve(process.cwd());
 const DIST = join(ROOT, 'dist');
 const DATA_DIR = join(ROOT, 'data');
