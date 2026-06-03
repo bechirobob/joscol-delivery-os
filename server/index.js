@@ -222,6 +222,21 @@ function clean(value, max = 160) {
   }).join('').replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+function validateRider(input, existing = []) {
+  const rider = {
+    name: clean(input.name, 80),
+    phone: clean(input.phone, 40),
+    vehicle: clean(input.vehicle, 80),
+    zone: clean(input.zone, 40),
+    capacity: Math.max(1, Math.min(6, Number(input.capacity) || 1)),
+  };
+  if (!rider.name || !rider.phone || !rider.vehicle) throw httpError(400, 'Missing required rider information');
+  if (!/^\+?\d[\d\s-]{6,}$/.test(rider.phone)) throw httpError(400, 'Rider phone/WhatsApp number looks invalid');
+  if (!zones.includes(rider.zone)) throw httpError(400, 'Unknown rider zone');
+  const max = existing.reduce((highest, candidate) => Math.max(highest, Number(String(candidate.id).replace(/\D/g, '')) || 0), 0);
+  return { id: `R-${Math.max(50, max + 1)}`, ...rider, rating: 5, status: 'available', load: 0, position: 12 };
+}
+
 function validateOrder(input) {
   const order = {
     customer: clean(input.customer, 80),
@@ -606,6 +621,16 @@ async function route(req, res) {
         return current;
       });
       return json(res, 200, state);
+    }
+    if (url.pathname === '/api/riders' && req.method === 'POST') {
+      requireRole(role, ['ops']);
+      const input = await body(req);
+      const state = await mutate((current) => {
+        const rider = validateRider(input, current.riders);
+        current.riders = [...current.riders, rider];
+        return current;
+      });
+      return json(res, 201, stateForRole(state, role));
     }
     if (url.pathname.startsWith('/api/riders/') && url.pathname.endsWith('/location') && req.method === 'POST') {
       requireRole(role, ['rider', 'ops']);
