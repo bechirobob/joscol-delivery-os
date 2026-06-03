@@ -5,6 +5,7 @@ import './styles.css';
 type Locale = 'es' | 'en';
 type Workspace = 'customer' | 'track' | 'dispatch' | 'rider' | 'ops' | 'rides';
 type StaffRole = 'dispatch' | 'rider' | 'ops';
+type AppRoute = 'customer' | 'staff';
 type OrderStatus = 'received' | 'assigned' | 'pickup' | 'transit' | 'delivered' | 'exception';
 type RiderStatus = 'available' | 'assigned' | 'busy' | 'offline';
 type Priority = 'standard' | 'urgent';
@@ -87,7 +88,7 @@ const emptyState: AppState = { orders: [], riders: [], selectedOrderId: '' };
 const copy = {
   es: {
     brand: 'JOSCOL', product: 'Delivery OS',
-    nav: { customer: 'Pedir', track: 'Track', dispatch: 'Dispatch', rider: 'Rider', ops: 'Ops', rides: 'Rides' },
+    nav: { customer: 'Pedir', track: 'Track', dispatch: 'Dispatch', rider: 'Rider', ops: 'Admin', rides: 'Rides' },
     eyebrow: 'Malabo', title: 'Entrega en minutos.',
     subtitle: '',
     primary: 'Nuevo pedido', secondary: 'Seguir pedido', activeOrders: 'Activos', avgEta: 'ETA', onlineRiders: 'Riders', revenue: 'XAF',
@@ -95,7 +96,7 @@ const copy = {
   },
   en: {
     brand: 'JOSCOL', product: 'Delivery OS',
-    nav: { customer: 'Order', track: 'Track', dispatch: 'Dispatch', rider: 'Rider', ops: 'Ops', rides: 'Rides' },
+    nav: { customer: 'Order', track: 'Track', dispatch: 'Dispatch', rider: 'Rider', ops: 'Admin', rides: 'Rides' },
     eyebrow: 'Malabo', title: 'Delivery in minutes.',
     subtitle: '',
     primary: 'New order', secondary: 'Track order', activeOrders: 'Active', avgEta: 'ETA', onlineRiders: 'Riders', revenue: 'XAF',
@@ -123,12 +124,23 @@ const roleWorkspaces: Record<StaffRole, Workspace[]> = {
   ops: ['ops', 'dispatch', 'rider', 'rides'],
 };
 
+const staffCredentialHints: Record<StaffRole, { label: string; email: string; password: string }> = {
+  dispatch: { label: 'Dispatch', email: 'dispatch@joscol.local', password: 'dispatch-demo' },
+  rider: { label: 'Rider', email: 'rider@joscol.local', password: 'rider-demo' },
+  ops: { label: 'Admin control', email: 'ops@joscol.local', password: 'ops-demo' },
+};
+
+function initialRoute(): AppRoute {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/staff')) return 'staff';
+  return 'customer';
+}
+
 function App() {
   const [locale, setLocale] = useState<Locale>('es');
+  const [appRoute, setAppRoute] = useState<AppRoute>(initialRoute);
   const [customerTab, setCustomerTab] = useState<'customer' | 'track'>('customer');
   const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
   const [loginForm, setLoginForm] = useState<LoginForm>({ role: 'dispatch', email: 'dispatch@joscol.local', password: '' });
-  const [staffMenuOpen, setStaffMenuOpen] = useState(false);
   const [workspace, setWorkspace] = useState<Workspace>('customer');
   const [state, setState] = useState<AppState>(emptyState);
   const [trackingId, setTrackingId] = useState('');
@@ -152,6 +164,18 @@ function App() {
       navigator.serviceWorker.register('/sw.js').catch(() => undefined);
     }
   }, []);
+
+  useEffect(() => {
+    const syncRoute = () => setAppRoute(window.location.pathname.startsWith('/staff') ? 'staff' : 'customer');
+    window.addEventListener('popstate', syncRoute);
+    return () => window.removeEventListener('popstate', syncRoute);
+  }, []);
+
+  function navigateApp(route: AppRoute) {
+    const path = route === 'staff' ? '/staff' : '/';
+    window.history.pushState({}, '', path);
+    setAppRoute(route);
+  }
 
   const api = useCallback(async function api<T>(path: string, options?: RequestInit): Promise<T> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -178,7 +202,7 @@ function App() {
     setBusy(true);
     try {
       const login = await api<{ role: StaffRole; source: string }>('/api/auth/login', { method: 'POST', body: JSON.stringify(loginForm) });
-      setStaffMenuOpen(false);
+      navigateApp('staff');
       setStaffRole(login.role);
       setWorkspace(login.role === 'ops' ? 'ops' : login.role);
       setMessage(`Session active · ${login.role.toUpperCase()} · ${login.source}`);
@@ -195,6 +219,7 @@ function App() {
     setStaffRole(null);
     setWorkspace('customer');
     setState(emptyState);
+    navigateApp('customer');
     setMessage('Returned to customer app. Staff data hidden.');
   }
 
@@ -274,21 +299,23 @@ function App() {
   return (
     <main id="top" className={staffRole ? 'staff-shell' : 'customer-shell'}>
       <header className="app-topbar">
-        <a className="brand" href="#top" aria-label="JOSCOL Delivery OS home"><img src={joscolLogo} alt="JOSCOL" /><small>{staffRole ? `${staffRole.toUpperCase()} workspace` : t.product}</small></a>
+        <a className="brand" href={appRoute === 'staff' ? '/staff' : '#top'} onClick={(event) => { if (appRoute === 'staff') { event.preventDefault(); navigateApp('staff'); } }} aria-label="JOSCOL Delivery OS home"><img src={joscolLogo} alt="JOSCOL" /><small>{staffRole ? `${staffCredentialHints[staffRole].label} workspace` : appRoute === 'staff' ? 'Staff login' : t.product}</small></a>
         <div className="top-actions">
-          {staffRole ? <button className="ghost" onClick={exitStaff} type="button">{locale === 'es' ? 'Cliente' : 'Customer'}</button> : <button className="ghost" aria-expanded={staffMenuOpen} aria-controls="staff-entry" onClick={() => setStaffMenuOpen((open) => !open)} type="button">Staff</button>}
+          {appRoute === 'staff' ? <button className="ghost" onClick={staffRole ? exitStaff : () => navigateApp('customer')} type="button">{locale === 'es' ? 'Cliente' : 'Customer'}</button> : <button className="ghost staff-link" onClick={() => navigateApp('staff')} type="button">Staff</button>}
           <button className="locale-toggle" onClick={() => setLocale(locale === 'es' ? 'en' : 'es')} type="button">{locale === 'es' ? 'EN' : 'ES'}</button>
         </div>
       </header>
 
-      {!staffRole && <CustomerShell locale={locale} customerTab={customerTab} setCustomerTab={setCustomerTab} form={form} setForm={setForm} quote={quote} createOrder={createOrder} trackingId={trackingId} setTrackingId={setTrackingId} trackedOrder={trackedOrder} lookupTracking={lookupTracking} busy={busy} staffMenuOpen={staffMenuOpen} loginForm={loginForm} setLoginForm={setLoginForm} openStaff={enterStaff} />}
+      {appRoute === 'customer' && !staffRole && <CustomerShell locale={locale} customerTab={customerTab} setCustomerTab={setCustomerTab} form={form} setForm={setForm} quote={quote} createOrder={createOrder} trackingId={trackingId} setTrackingId={setTrackingId} trackedOrder={trackedOrder} lookupTracking={lookupTracking} busy={busy} />}
 
-      {staffRole && <>
+      {appRoute === 'staff' && !staffRole && <StaffLoginPage locale={locale} loginForm={loginForm} setLoginForm={setLoginForm} openStaff={enterStaff} busy={busy} />}
+
+      {appRoute === 'staff' && staffRole && <>
         <nav className="workspace-rail" aria-label="Staff workspaces">
           {visibleStaffWorkspaces.map((id) => <button key={id} className={workspace === id ? 'active' : ''} onClick={() => setWorkspace(id)} type="button">{workspaceIcons[id]}<span>{t.nav[id]}</span></button>)}
         </nav>
         <section className="staff-command-head">
-          <div><p className="eyebrow">{staffRole.toUpperCase()} · role scoped</p><h1>{staffRole === 'dispatch' ? (locale === 'es' ? 'Cola, asignación y excepciones.' : 'Queue, assignment, exceptions.') : staffRole === 'rider' ? (locale === 'es' ? 'Rutas asignadas y estados.' : 'Assigned routes and status updates.') : (locale === 'es' ? 'Control interno de operación.' : 'Internal operation control.')}</h1></div>
+          <div><p className="eyebrow">{staffCredentialHints[staffRole].label.toUpperCase()} · role scoped</p><h1>{staffRole === 'dispatch' ? (locale === 'es' ? 'Cola, asignación y excepciones.' : 'Queue, assignment, exceptions.') : staffRole === 'rider' ? (locale === 'es' ? 'Rutas asignadas y estados.' : 'Assigned routes and status updates.') : (locale === 'es' ? 'Admin control: pedidos, riders, incidencias.' : 'Admin control: orders, riders, exceptions.')}</h1></div>
           {selectedOrder && <TrackingSheet locale={locale} order={selectedOrder} rider={selectedRider} compact />}
         </section>
         <section className="ops-strip" aria-label="Current operations summary">
@@ -303,12 +330,13 @@ function App() {
         </section>
       </>}
 
-      {!staffRole && message && <p className="status-message" role="status" aria-live="polite">{busy ? 'Working...' : message}</p>}
+      {appRoute === 'customer' && !staffRole && message && <p className="status-message" role="status" aria-live="polite">{busy ? 'Working...' : message}</p>}
+      {appRoute === 'staff' && !staffRole && message && <p className="status-message" role="status" aria-live="polite">{busy ? 'Working...' : message}</p>}
     </main>
   );
 }
 
-function CustomerShell({ locale, customerTab, setCustomerTab, form, setForm, quote, createOrder, trackingId, setTrackingId, trackedOrder, lookupTracking, busy, staffMenuOpen, loginForm, setLoginForm, openStaff }: { locale: Locale; customerTab: 'customer' | 'track'; setCustomerTab: (tab: 'customer' | 'track') => void; form: OrderForm; setForm: (next: OrderForm) => void; quote: number; createOrder: (event: FormEvent) => void; trackingId: string; setTrackingId: (id: string) => void; trackedOrder?: Order; lookupTracking: () => Promise<void>; busy: boolean; staffMenuOpen: boolean; loginForm: LoginForm; setLoginForm: (next: LoginForm) => void; openStaff: (event: FormEvent) => void }) {
+function CustomerShell({ locale, customerTab, setCustomerTab, form, setForm, quote, createOrder, trackingId, setTrackingId, trackedOrder, lookupTracking, busy }: { locale: Locale; customerTab: 'customer' | 'track'; setCustomerTab: (tab: 'customer' | 'track') => void; form: OrderForm; setForm: (next: OrderForm) => void; quote: number; createOrder: (event: FormEvent) => void; trackingId: string; setTrackingId: (id: string) => void; trackedOrder?: Order; lookupTracking: () => Promise<void>; busy: boolean }) {
   const t = copy[locale];
   return <>
     <section className="command-hero customer-hero">
@@ -320,8 +348,11 @@ function CustomerShell({ locale, customerTab, setCustomerTab, form, setForm, quo
       {customerTab === 'customer' && <CustomerModule form={form} setForm={setForm} quote={quote} createOrder={createOrder} locale={locale} busy={busy} />}
       {customerTab === 'track' && <TrackingModule locale={locale} trackingId={trackingId} setTrackingId={setTrackingId} order={trackedOrder} lookupTracking={lookupTracking} busy={busy} />}
     </section>
-    {staffMenuOpen && <section className="staff-entry" id="staff-entry"><form onSubmit={openStaff} className="staff-login"><strong>Staff session</strong><p>Session cookie auth · demo/review credentials only when env allows it.</p><div className="staff-login-grid"><label>Role<select value={loginForm.role} onChange={(e) => { const role = e.target.value as StaffRole; setLoginForm({ ...loginForm, role, email: `${role}@joscol.local` }); }}><option value="dispatch">Dispatch</option><option value="rider">Rider</option><option value="ops">Ops</option></select></label><label>Email<input autoComplete="username" value={loginForm.email} onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })} /></label><label>Password<input autoComplete="current-password" type="password" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} placeholder={`${loginForm.role}-demo`} /></label></div><button disabled={busy || !loginForm.email || !loginForm.password} type="submit">Open {loginForm.role}</button></form></section>}
   </>;
+}
+
+function StaffLoginPage({ locale, loginForm, setLoginForm, openStaff, busy }: { locale: Locale; loginForm: LoginForm; setLoginForm: (next: LoginForm) => void; openStaff: (event: FormEvent) => void; busy: boolean }) {
+  return <section className="staff-login-page" id="staff-login"><div className="staff-login-hero"><p className="eyebrow">{locale === 'es' ? 'Acceso staff' : 'Staff access'}</p><h1>{locale === 'es' ? 'Login separado para despacho, riders y admin.' : 'Separate login for dispatch, riders, and admin.'}</h1><p>{locale === 'es' ? 'Los clientes siguen en la app de pedidos. El equipo entra aquí para monitorizar cola, movimientos y controles.' : 'Customers stay on the ordering app. The team enters here for queue, movement, and control monitoring.'}</p></div><form onSubmit={openStaff} className="staff-entry staff-login"><strong>{locale === 'es' ? 'Abrir workspace' : 'Open workspace'}</strong><div className="staff-login-grid"><label>Role<select value={loginForm.role} onChange={(e) => { const role = e.target.value as StaffRole; setLoginForm({ ...loginForm, role, email: staffCredentialHints[role].email }); }}><option value="dispatch">Dispatch</option><option value="rider">Rider</option><option value="ops">Admin control</option></select></label><label>Email<input autoComplete="username" value={loginForm.email} onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })} /></label><label>Password<input autoComplete="current-password" type="password" value={loginForm.password} onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })} placeholder={staffCredentialHints[loginForm.role].password} /></label></div><button disabled={busy || !loginForm.email || !loginForm.password} type="submit">{locale === 'es' ? 'Entrar' : 'Log in'} · {staffCredentialHints[loginForm.role].label}</button></form><div className="credential-grid" aria-label="Demo review credentials">{(Object.keys(staffCredentialHints) as StaffRole[]).map((role) => <button className="credential-card ghost" key={role} type="button" onClick={() => setLoginForm({ role, email: staffCredentialHints[role].email, password: staffCredentialHints[role].password })}><strong>{staffCredentialHints[role].label}</strong><span>{staffCredentialHints[role].email}</span><code>{staffCredentialHints[role].password}</code></button>)}</div></section>;
 }
 
 function CustomerModule({ form, setForm, quote, createOrder, locale, busy }: { form: OrderForm; setForm: (next: OrderForm) => void; quote: number; createOrder: (event: FormEvent) => void; locale: Locale; busy: boolean }) {
@@ -347,9 +378,10 @@ function RiderModule({ locale, orders, riders, advanceOrder, markException, shar
 }
 
 function OperationsModule({ locale, orders, riders, resetSystem, exportState, refreshState, busy }: { locale: Locale; orders: Order[]; riders: Rider[]; resetSystem: () => void; exportState: () => void; refreshState: () => Promise<void>; busy: boolean }) {
-  const exceptions = orders.filter((order) => order.status === 'exception').length;
+  const exceptions = orders.filter((order) => order.status === 'exception');
+  const incoming = orders.filter((order) => order.status !== 'delivered');
   const delivered = orders.filter((order) => order.status === 'delivered').length;
-  return <div className="workbench split-workbench"><div className="order-sheet"><p className="eyebrow">{copy[locale].ops}</p><h2>{locale === 'es' ? 'Salud de operación' : 'Operation health'}</h2><div className="ops-list"><Metric label={locale === 'es' ? 'Entregados' : 'Delivered'} value={String(delivered)} /><Metric label={locale === 'es' ? 'Incidencias' : 'Exceptions'} value={String(exceptions)} /><Metric label={locale === 'es' ? 'Capacidad' : 'Capacity'} value={`${riders.reduce((sum, rider) => sum + rider.load, 0)}/${riders.reduce((sum, rider) => sum + rider.capacity, 0)}`} /><Metric label={locale === 'es' ? 'Zonas' : 'Zones'} value={String(new Set(riders.map((rider) => rider.zone)).size)} /></div><div className="bottom-action"><button disabled={busy} onClick={exportState} type="button">{locale === 'es' ? 'Exportar' : 'Export'}</button><button className="ghost" disabled={busy} onClick={() => void refreshState()} type="button">Refresh</button><button className="danger" disabled={busy} onClick={resetSystem} type="button">Reset</button></div></div><div className="route-brief dark"><p className="eyebrow">Ops</p><h2>Jutsus</h2><ol><li><strong>API</strong><span>Gated</span></li><li><strong>State</strong><span>Export</span></li><li><strong>Reset</strong><span>Seed</span></li></ol></div></div>;
+  return <div className="admin-control-board"><section className="admin-panel"><p className="eyebrow">{locale === 'es' ? 'Incoming orders' : 'Incoming orders'}</p><h2>{locale === 'es' ? 'Cola en vivo' : 'Live queue'}</h2><div className="admin-list">{incoming.map((order) => <article key={order.id} className="admin-row"><div><strong>{order.id}</strong><span>{order.pickup} → {order.dropoff}</span></div><span className={`status ${order.status}`}>{statusText[locale][order.status]}</span><b>{order.eta} min</b></article>)}{incoming.length === 0 && <p className="empty-state">{locale === 'es' ? 'Sin pedidos activos.' : 'No active orders.'}</p>}</div></section><section className="admin-panel"><p className="eyebrow">{locale === 'es' ? 'Rider movements' : 'Rider movements'}</p><h2>{locale === 'es' ? 'Movimiento riders' : 'Rider movement'}</h2><div className="admin-list">{riders.map((rider) => <article key={rider.id} className="admin-row"><div><strong>{rider.name}</strong><span>{rider.zone} · pos {rider.position}% · load {rider.load}/{rider.capacity}</span></div><span className={`status ${rider.status}`}>{riderStatusText[locale][rider.status]}</span><b>{rider.location?.sharing ? 'GPS' : 'No GPS'}</b></article>)}</div></section><section className="admin-panel admin-actions"><p className="eyebrow">Admin control</p><h2>{locale === 'es' ? 'Salud y controles' : 'Health and controls'}</h2><div className="ops-list"><Metric label={locale === 'es' ? 'Entregados' : 'Delivered'} value={String(delivered)} /><Metric label={locale === 'es' ? 'Incidencias' : 'Exceptions'} value={String(exceptions.length)} /><Metric label={locale === 'es' ? 'Capacidad' : 'Capacity'} value={`${riders.reduce((sum, rider) => sum + rider.load, 0)}/${riders.reduce((sum, rider) => sum + rider.capacity, 0)}`} /><Metric label={locale === 'es' ? 'Zonas' : 'Zones'} value={String(new Set(riders.map((rider) => rider.zone)).size)} /></div><div className="bottom-action"><button disabled={busy} onClick={exportState} type="button">{locale === 'es' ? 'Exportar' : 'Export'}</button><button className="ghost" disabled={busy} onClick={() => void refreshState()} type="button">Refresh</button><button className="danger" disabled={busy} onClick={resetSystem} type="button">Reset</button></div></section></div>;
 }
 
 function RideHailingModule({ locale }: { locale: Locale }) { return <div className="workbench split-workbench"><div className="order-sheet"><p className="eyebrow">{copy[locale].future}</p><h2>Ride</h2><div className="ops-list"><Metric label="ETA" value="Phase 2" /><Metric label="Fleet" value="Shared" /></div></div><div className="route-brief dark"><ol><li><strong>Delivery</strong><span>Now</span></li><li><strong>Rides</strong><span>Next</span></li></ol></div></div>; }

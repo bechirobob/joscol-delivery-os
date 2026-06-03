@@ -95,15 +95,15 @@ main { min-height: 100vh; max-width: 1120px; margin: 0 auto; padding: 14px clamp
 
 .command-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(330px, .72fr);
-  gap: clamp(22px, 4vw, 48px);
+  grid-template-columns: minmax(0, 1fr) minmax(300px, .64fr);
+  gap: clamp(20px, 3vw, 38px);
   align-items: end;
-  margin: 30px 0 12px;
+  margin: 22px 0 10px;
 }
 .eyebrow { margin: 0 0 10px; text-transform: uppercase; font-size: .72rem; font-weight: 950; letter-spacing: .16em; color: var(--brand-red); }
 h1, h2, h3, p { margin-top: 0; }
-h1 { max-width: 810px; font-size: clamp(2.9rem, 6vw, 5.6rem); line-height: .92; letter-spacing: -.075em; margin-bottom: 20px; font-weight: 1000; }
-h2 { font-size: clamp(2rem, 3.2vw, 3rem); line-height: .96; letter-spacing: -.065em; margin-bottom: 18px; font-weight: 1000; }
+h1 { max-width: 760px; font-size: clamp(2.25rem, 4.6vw, 4.25rem); line-height: .96; letter-spacing: -.065em; margin-bottom: 18px; font-weight: 1000; }
+h2 { font-size: clamp(1.55rem, 2.45vw, 2.25rem); line-height: 1; letter-spacing: -.055em; margin-bottom: 16px; font-weight: 1000; }
 p { color: var(--muted); line-height: 1.42; }
 .hero-copy-block p:not(.eyebrow) { max-width: 640px; font-size: clamp(1.04rem, 1.35vw, 1.2rem); }
 .hero-actions, .bottom-action { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 24px; }
@@ -133,9 +133,23 @@ p { color: var(--muted); line-height: 1.42; }
 }
 .customer-flow-card ol { margin: 12px 0 0; padding-left: 20px; color: var(--muted); font-weight: 800; }
 .compact-card { display: grid; gap: 10px; align-content: center; min-height: 210px; }
-.compact-card strong { font-size: clamp(3rem, 7vw, 5rem); letter-spacing: -.08em; line-height: .86; }
+.compact-card strong { font-size: clamp(2.4rem, 5vw, 3.6rem); letter-spacing: -.075em; line-height: .9; }
 .compact-card span { width: fit-content; background: var(--soft); padding: 8px 10px; font-weight: 950; color: var(--ink); }
 .staff-entry { display: block; margin-top: 18px; }
+.staff-login-page {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(320px, 1.1fr);
+  gap: clamp(22px, 4vw, 42px);
+  align-items: start;
+  margin: 42px 0 24px;
+}
+.staff-login-hero p:not(.eyebrow) { max-width: 540px; font-size: 1rem; font-weight: 750; }
+.credential-grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.credential-card { display: grid; gap: 5px; justify-items: start; min-height: 112px; text-align: left; }
+.credential-card span { color: var(--muted); font-weight: 850; }
+.credential-card code { color: var(--brand-red); font-weight: 950; }
+.staff-link { border: 1px solid var(--line); }
+
 .staff-entry p { margin: 4px 0 0; color: var(--muted); font-size: .84rem; font-weight: 750; }
 .staff-login { display: grid; gap: 12px; width: 100%; }
 .staff-login-grid { display: grid; grid-template-columns: 140px 1fr 1fr; gap: 10px; }
@@ -147,7 +161,7 @@ p { color: var(--muted); line-height: 1.42; }
   align-items: stretch;
   margin: 30px 0 12px;
 }
-.staff-command-head h1 { font-size: clamp(2.6rem, 5vw, 4.8rem); }
+.staff-command-head h1 { font-size: clamp(2rem, 3.7vw, 3.35rem); }
 
 .ops-strip {
   display: grid;
@@ -312,3 +326,38 @@ input, select { width: 100%; border: 1px solid #dcdcdc; border-radius: var(--rad
   .workspace-rail button { min-height: 56px; font-size: .68rem; }
   .ui-icon { width: 20px; height: 20px; }
 }
+
+.admin-control-board {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.admin-panel {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: clamp(16px, 2.6vw, 24px);
+}
+.admin-panel.admin-actions { grid-column: 1 / -1; }
+.admin-list { display: grid; gap: 0; border-top: 1px solid var(--line); }
+.admin-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+.admin-row div { display: grid; gap: 3px; min-width: 0; }
+.admin-row span:not(.status) { color: var(--muted); font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-row b { font-size: .82rem; white-space: nowrap; }
+
+@media (max-width: 760px) {
+  .staff-login-page, .admin-control-board { grid-template-columns: 1fr; }
+  .credential-grid { grid-template-columns: 1fr; }
+  .staff-login-grid { grid-template-columns: 1fr; }
+  .admin-panel.admin-actions { grid-column: auto; }
+  .admin-row { grid-template-columns: 1fr; align-items: start; }
+}
+
+.staff-login-hero h1 { font-size: clamp(1.95rem, 3.35vw, 3.15rem); line-height: 1; }
+@media (max-width: 760px) { .staff-login-hero h1 { font-size: clamp(1.9rem, 9vw, 2.7rem); } }

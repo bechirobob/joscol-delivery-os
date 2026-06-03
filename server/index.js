@@ -659,8 +659,10 @@ async function route(req, res) {
 
 function serveStatic(pathname, res) {
   const requested = pathname === '/' ? '/index.html' : pathname;
-  const filePath = normalize(join(DIST, requested));
-  if (!filePath.startsWith(DIST) || !existsSync(filePath)) return json(res, 404, { error: 'Not found' });
+  let filePath = normalize(join(DIST, requested));
+  if (!filePath.startsWith(DIST)) return json(res, 404, { error: 'Not found' });
+  if (!existsSync(filePath) && !pathname.startsWith('/api/')) filePath = join(DIST, 'index.html');
+  if (!existsSync(filePath)) return json(res, 404, { error: 'Not found' });
   const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
   res.writeHead(200, { 'Content-Type': types[extname(filePath)] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff' });
   createReadStream(filePath).pipe(res);
