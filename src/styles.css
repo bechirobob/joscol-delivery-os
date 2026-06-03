@@ -298,18 +298,108 @@ input, select { width: 100%; border: 1px solid #dcdcdc; border-radius: var(--rad
 .route-brief li { display: grid; grid-template-columns: minmax(90px, .42fr) 1fr; gap: 14px; align-items: baseline; }
 .route-brief span { color: var(--muted); }
 
-.dispatch-board { display: grid; grid-template-columns: minmax(280px, .78fr) minmax(0, 1.22fr); gap: 24px; }
-.queue-pane { display: grid; align-content: start; }
-.queue-row { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; text-align: left; background: transparent; color: var(--ink); border-radius: 0; border-bottom: 1px solid var(--line); padding: 15px 2px; }
-.queue-row.selected { background: var(--soft); border-radius: 0; padding-inline: 12px; border-left: 5px solid var(--brand-red); border-bottom-color: transparent; }
-.queue-main { display: grid; gap: 4px; }
-.queue-main strong { letter-spacing: -.03em; }
-.queue-main small { color: var(--muted); font-weight: 700; }
-.dispatch-pane { display: grid; gap: 16px; }
-.rider-lane { display: grid; gap: 0; border-top: 1px solid var(--line); }
-.rider-line { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid var(--line); }
-.rider-line div { display: grid; gap: 3px; }
-.rider-line span:not(.status) { color: var(--muted); font-size: .92rem; }
+.dispatch-control-room {
+  display: grid;
+  grid-template-columns: minmax(260px, .72fr) minmax(0, 1.16fr) minmax(280px, .88fr);
+  gap: 16px;
+  align-items: start;
+}
+.dispatch-summary {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.dispatch-queue-card, .dispatch-mission-card, .dispatch-rider-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: clamp(14px, 2vw, 20px);
+}
+.panel-title-row, .mission-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.panel-title-row h2, .mission-head h2 { margin-bottom: 4px; }
+.panel-title-row > span, .mission-head p { color: var(--muted); font-weight: 850; margin: 0; }
+.control-queue-list, .rider-candidate-list { display: grid; gap: 8px; }
+.control-ticket {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px 12px;
+  align-items: center;
+  text-align: left;
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 12px;
+}
+.control-ticket.selected { border-color: var(--ink); box-shadow: inset 5px 0 0 var(--brand-red); }
+.ticket-main, .ticket-meta, .candidate-main { display: grid; gap: 3px; min-width: 0; }
+.ticket-main strong, .candidate-main strong { letter-spacing: -.035em; }
+.ticket-main small, .ticket-meta small, .candidate-main span, .candidate-main small, .mission-grid span { color: var(--muted); font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ticket-meta { justify-items: end; }
+.ticket-meta b { color: var(--brand-red); font-size: .8rem; text-transform: uppercase; }
+.control-ticket .status { grid-column: 1 / -1; }
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.mission-grid article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  background: var(--soft);
+  padding: 12px;
+}
+.mission-grid small { color: var(--muted); font-weight: 950; text-transform: uppercase; font-size: .68rem; letter-spacing: .08em; }
+.mission-grid strong { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dispatch-command-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.dispatch-command-bar a {
+  min-height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--soft);
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 950;
+  border-radius: var(--radius);
+}
+.rider-candidate {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--line);
+  padding: 12px;
+}
+.rider-candidate.assigned { border-color: var(--brand-red); box-shadow: inset 5px 0 0 var(--brand-red); }
+.rider-candidate button { grid-column: 1 / -1; min-height: 40px; }
+.rider-candidate .status { justify-self: end; }
+@media (max-width: 1100px) {
+  .dispatch-control-room { grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr); }
+  .dispatch-rider-card { grid-column: 1 / -1; }
+  .rider-candidate-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .dispatch-control-room, .mission-grid, .dispatch-command-bar, .rider-candidate-list { grid-template-columns: 1fr; }
+  .dispatch-summary { grid-template-columns: repeat(4, minmax(88px, 1fr)); overflow-x: auto; }
+  .control-ticket, .rider-candidate { grid-template-columns: 1fr; }
+  .ticket-meta, .rider-candidate .status { justify-items: start; justify-self: start; }
+}
 .status { display: inline-flex; width: fit-content; border-radius: var(--radius); padding: 6px 9px; background: var(--soft-2); color: var(--ink); font-weight: 950; font-size: .7rem; text-transform: uppercase; white-space: nowrap; }
 .status.received { background: #fff1df; color: #7c3700; }
 .status.assigned, .status.pickup, .status.transit, .status.busy { background: #e8f0ff; color: #17479a; }

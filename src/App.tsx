@@ -412,10 +412,103 @@ function TrackingSheet({ locale, order, rider, compact = false }: { locale: Loca
 }
 
 function TimelinePanel({ locale, order }: { locale: Locale; order?: Order }) { return <div className="timeline-panel"><p className="eyebrow">Timeline</p><h2>{order ? order.id : locale === 'es' ? 'Sin pedido' : 'No order'}</h2><ol className="timeline">{order?.timeline.map((event, index) => <li key={`${event.at}-${index}`}><strong>{event.label}</strong><span>{event.actor ? `${event.actor} · ` : ''}{new Date(event.at).toLocaleString(locale === 'es' ? 'es-GQ' : 'en-US')}</span></li>)}</ol></div>; }
-function DispatchModule({ locale, orders, riders, selectedOrderId, setSelectedOrderId, assignRider, autoAssign, advanceOrder, markException, busy }: { locale: Locale; orders: Order[]; riders: Rider[]; selectedOrderId: string; setSelectedOrderId: (id: string) => void; assignRider: (orderId: string, riderId: string) => void; autoAssign: (orderId: string) => void; advanceOrder: (orderId: string) => void; markException: (orderId: string) => void; busy: boolean }) {
-  const selected = orders.find((order) => order.id === selectedOrderId) ?? orders[0];
-  return <div className="dispatch-board"><div className="queue-pane"><p className="eyebrow">{copy[locale].dispatch}</p><h2>{locale === 'es' ? 'Cola' : 'Queue'}</h2>{orders.map((order) => <button key={order.id} className={`queue-row ${selected?.id === order.id ? 'selected' : ''}`} onClick={() => setSelectedOrderId(order.id)} type="button"><span className="queue-main"><strong>{order.id}</strong><small>{order.pickup}</small></span><span className={`status ${order.status}`}>{statusText[locale][order.status]}</span></button>)}</div>{selected && <div className="dispatch-pane"><TrackingSheet locale={locale} order={selected} rider={riders.find((rider) => rider.id === selected.riderId)} /><div className="rider-lane">{riders.map((rider) => <article key={rider.id} className="rider-line"><div><strong>{rider.name}</strong><span>{rider.zone} · {rider.vehicle}</span></div><span className={`status ${rider.status}`}>{riderStatusText[locale][rider.status]} · {rider.load}/{rider.capacity}</span><button onClick={() => assignRider(selected.id, rider.id)} disabled={busy || rider.status === 'offline' || rider.load >= rider.capacity} type="button">{locale === 'es' ? 'Asignar' : 'Assign'}</button></article>)}</div><div className="bottom-action"><button onClick={() => autoAssign(selected.id)} disabled={busy || selected.status === 'delivered' || selected.status === 'exception'} type="button">Auto-assign</button><button className="ghost" onClick={() => advanceOrder(selected.id)} disabled={busy || selected.status === 'delivered' || selected.status === 'exception'} type="button">{locale === 'es' ? 'Avanzar' : 'Advance'}</button><button className="ghost" onClick={() => markException(selected.id)} disabled={busy || selected.status === 'delivered'} type="button">{locale === 'es' ? 'Incidencia' : 'Exception'}</button></div></div>}</div>;
+function ageMinutes(createdAt: string) {
+  const parsed = new Date(createdAt).getTime();
+  if (Number.isNaN(parsed)) return 0;
+  return Math.max(0, Math.round((Date.now() - parsed) / 60000));
 }
+
+function slaLabel(locale: Locale, order: Order) {
+  if (order.status === 'exception') return locale === 'es' ? 'Incidencia' : 'Exception';
+  if (order.status === 'delivered') return locale === 'es' ? 'Cerrado' : 'Closed';
+  const age = ageMinutes(order.createdAt);
+  if (order.priority === 'urgent' || age >= 18) return locale === 'es' ? 'Atención' : 'Watch';
+  if (!order.riderId) return locale === 'es' ? 'Asignar' : 'Assign';
+  return locale === 'es' ? 'En ruta' : 'Moving';
+}
+
+function riderFit(rider: Rider, order?: Order) {
+  if (!order) return { score: 0, reasons: [] as string[] };
+  const reasons: string[] = [];
+  let score = 50;
+  if (rider.status === 'offline') score -= 80;
+  if (rider.load >= rider.capacity) score -= 45;
+  if (rider.status === 'available') { score += 22; reasons.push('free'); }
+  if (rider.zone === order.zone) { score += 24; reasons.push('zone'); }
+  if (rider.location?.sharing) { score += 8; reasons.push('gps'); }
+  score += Math.round(rider.rating * 6);
+  score -= rider.load * 12;
+  score += Math.max(0, 12 - Math.abs(rider.position - routeProgress(order, rider)) / 8);
+  return { score: Math.max(0, Math.round(score)), reasons };
+}
+
+function DispatchModule({ locale, orders, riders, selectedOrderId, setSelectedOrderId, assignRider, autoAssign, advanceOrder, markException, busy }: { locale: Locale; orders: Order[]; riders: Rider[]; selectedOrderId: string; setSelectedOrderId: (id: string) => void; assignRider: (orderId: string, riderId: string) => void; autoAssign: (orderId: string) => void; advanceOrder: (orderId: string) => void; markException: (orderId: string) => void; busy: boolean }) {
+  const activeOrders = orders.filter((order) => order.status !== 'delivered');
+  const selected = orders.find((order) => order.id === selectedOrderId) ?? activeOrders[0] ?? orders[0];
+  const selectedRider = riders.find((rider) => rider.id === selected?.riderId);
+  const unassigned = activeOrders.filter((order) => !order.riderId).length;
+  const exceptions = activeOrders.filter((order) => order.status === 'exception').length;
+  const urgent = activeOrders.filter((order) => order.priority === 'urgent' || ageMinutes(order.createdAt) >= 18).length;
+  const riderBench = riders
+    .map((rider) => ({ rider, fit: riderFit(rider, selected) }))
+    .sort((a, b) => b.fit.score - a.fit.score);
+
+  return <div className="dispatch-control-room">
+    <section className="dispatch-summary" aria-label={locale === 'es' ? 'Resumen despacho' : 'Dispatch summary'}>
+      <Metric label={locale === 'es' ? 'Cola activa' : 'Active queue'} value={String(activeOrders.length)} />
+      <Metric label={locale === 'es' ? 'Sin rider' : 'Unassigned'} value={String(unassigned)} />
+      <Metric label={locale === 'es' ? 'Atención' : 'Watch'} value={String(urgent)} />
+      <Metric label={locale === 'es' ? 'Incidencias' : 'Exceptions'} value={String(exceptions)} />
+    </section>
+
+    <section className="dispatch-queue-card" aria-label={locale === 'es' ? 'Cola de pedidos' : 'Order queue'}>
+      <div className="panel-title-row"><div><p className="eyebrow">{copy[locale].dispatch}</p><h2>{locale === 'es' ? 'Cola de misión' : 'Mission queue'}</h2></div><span>{locale === 'es' ? 'prioridad + SLA' : 'priority + SLA'}</span></div>
+      <div className="control-queue-list">
+        {activeOrders.length === 0 && <p className="empty-state">{locale === 'es' ? 'No hay pedidos activos.' : 'No active orders.'}</p>}
+        {activeOrders.map((order) => <button key={order.id} className={`control-ticket ${selected?.id === order.id ? 'selected' : ''}`} onClick={() => setSelectedOrderId(order.id)} type="button">
+          <span className="ticket-main"><strong>{order.id}</strong><small>{order.pickup} → {order.dropoff}</small></span>
+          <span className="ticket-meta"><b>{slaLabel(locale, order)}</b><small>{ageMinutes(order.createdAt)}m · {order.priority === 'urgent' ? 'urgent' : order.zone || 'zone'}</small></span>
+          <span className={`status ${order.status}`}>{statusText[locale][order.status]}</span>
+        </button>)}
+      </div>
+    </section>
+
+    {selected && <section className="dispatch-mission-card" aria-label={locale === 'es' ? 'Pedido seleccionado' : 'Selected order'}>
+      <div className="mission-head">
+        <div><p className="eyebrow">{locale === 'es' ? 'Pedido seleccionado' : 'Selected mission'}</p><h2>{selected.id}</h2><p>{selected.item} · {selected.price.toLocaleString('es-GQ')} XAF</p></div>
+        <span className={`status ${selected.status}`}>{statusText[locale][selected.status]}</span>
+      </div>
+      <div className="mission-grid">
+        <article><small>{locale === 'es' ? 'Cliente' : 'Customer'}</small><strong>{selected.customer || '-'}</strong><span>{selected.phone || (locale === 'es' ? 'Sin teléfono' : 'No phone')}</span></article>
+        <article><small>{locale === 'es' ? 'Ruta' : 'Route'}</small><strong>{selected.pickup}</strong><span>{selected.dropoff}</span></article>
+        <article><small>SLA</small><strong>{slaLabel(locale, selected)}</strong><span>{ageMinutes(selected.createdAt)} min · ETA {selected.eta} min</span></article>
+        <article><small>Rider</small><strong>{selectedRider?.name || (locale === 'es' ? 'Sin asignar' : 'Unassigned')}</strong><span>{selectedRider ? `${selectedRider.vehicle} · ${selectedRider.load}/${selectedRider.capacity}` : locale === 'es' ? 'Elegir candidato' : 'Choose candidate'}</span></article>
+      </div>
+      <TrackingSheet locale={locale} order={selected} rider={selectedRider} compact />
+      <div className="dispatch-command-bar">
+        <button onClick={() => autoAssign(selected.id)} disabled={busy || selected.status === 'delivered' || selected.status === 'exception'} type="button">{locale === 'es' ? 'Auto-asignar mejor rider' : 'Auto-assign best rider'}</button>
+        <button className="ghost" onClick={() => advanceOrder(selected.id)} disabled={busy || selected.status === 'delivered' || selected.status === 'exception'} type="button">{locale === 'es' ? 'Avanzar etapa' : 'Advance stage'}</button>
+        <button className="danger" onClick={() => markException(selected.id)} disabled={busy || selected.status === 'delivered' || selected.status === 'exception'} type="button">{locale === 'es' ? 'Enviar a incidencia' : 'Flag exception'}</button>
+        {selected.phone && <a href={`https://wa.me/${selected.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>}
+      </div>
+    </section>}
+
+    {selected && <section className="dispatch-rider-card" aria-label={locale === 'es' ? 'Candidatos rider' : 'Rider candidates'}>
+      <div className="panel-title-row"><div><p className="eyebrow">{locale === 'es' ? 'Riders' : 'Riders'}</p><h2>{locale === 'es' ? 'Banco de capacidad' : 'Capacity bench'}</h2></div><span>{locale === 'es' ? 'fit operativo' : 'operational fit'}</span></div>
+      <div className="rider-candidate-list">
+        {riderBench.map(({ rider, fit }) => {
+          const canAssign = rider.status !== 'offline' && rider.load < rider.capacity;
+          return <article key={rider.id} className={`rider-candidate ${selected.riderId === rider.id ? 'assigned' : ''}`}>
+            <div className="candidate-main"><strong>{rider.name}</strong><span>{rider.zone} · {rider.vehicle}</span><small>{locale === 'es' ? 'score' : 'score'} {fit.score} · {fit.reasons.length ? fit.reasons.join(' + ') : (locale === 'es' ? 'sin match fuerte' : 'no strong match')}</small></div>
+            <span className={`status ${rider.status}`}>{riderStatusText[locale][rider.status]} · {rider.load}/{rider.capacity}</span>
+            <button onClick={() => assignRider(selected.id, rider.id)} disabled={busy || !canAssign || selected.status === 'delivered'} type="button">{selected.riderId === rider.id ? (locale === 'es' ? 'Asignado' : 'Assigned') : (locale === 'es' ? 'Asignar' : 'Assign')}</button>
+          </article>;
+        })}
+      </div>
+    </section>}
+  </div>;
+}
+
 
 function RiderModule({ locale, orders, riders, advanceOrder, markException, shareRiderLocation, demoRiderLocation, stopRiderLocation, busy }: { locale: Locale; orders: Order[]; riders: Rider[]; advanceOrder: (orderId: string) => void; markException: (orderId: string) => void; shareRiderLocation: (riderId: string) => void; demoRiderLocation: (riderId: string) => void; stopRiderLocation: (riderId: string) => void; busy: boolean }) {
   const demoRiderId = 'R-17';
