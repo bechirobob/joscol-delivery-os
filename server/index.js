@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { Buffer } from 'node:buffer';
 import { createHmac, createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile, mkdir, writeFile, rename, copyFile, stat } from 'node:fs/promises';
-import { existsSync, createReadStream } from 'node:fs';
+import { existsSync, createReadStream, readdirSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 
 const PORT = Number(process.env.PORT || 8787);
@@ -682,14 +682,40 @@ async function route(req, res) {
   }
 }
 
+function currentIndexAsset(extension) {
+  try {
+    return readdirSync(join(DIST, 'assets'))
+      .filter((name) => name.startsWith('index-') && name.endsWith(extension))
+      .sort()
+      .at(-1);
+  } catch {
+    return null;
+  }
+}
+
+function cacheHeaders(filePath) {
+  const ext = extname(filePath);
+  if (ext === '.html') return { 'Cache-Control': 'no-store' };
+  if (filePath.includes('/assets/')) return { 'Cache-Control': 'public, max-age=31536000, immutable' };
+  return { 'Cache-Control': 'public, max-age=300' };
+}
+
 function serveStatic(pathname, res) {
   const requested = pathname === '/' ? '/index.html' : pathname;
   let filePath = normalize(join(DIST, requested));
   if (!filePath.startsWith(DIST)) return json(res, 404, { error: 'Not found' });
+
+  if (!existsSync(filePath) && pathname.startsWith('/assets/index-')) {
+    const extension = extname(pathname);
+    const currentAsset = ['.js', '.css'].includes(extension) ? currentIndexAsset(extension) : null;
+    if (currentAsset) filePath = join(DIST, 'assets', currentAsset);
+  }
+
+  if (!existsSync(filePath) && pathname.startsWith('/assets/')) return json(res, 404, { error: 'Asset not found' });
   if (!existsSync(filePath) && !pathname.startsWith('/api/')) filePath = join(DIST, 'index.html');
   if (!existsSync(filePath)) return json(res, 404, { error: 'Not found' });
-  const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
-  res.writeHead(200, { 'Content-Type': types[extname(filePath)] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff' });
+  const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
+  res.writeHead(200, { 'Content-Type': types[extname(filePath)] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', ...cacheHeaders(filePath) });
   createReadStream(filePath).pipe(res);
 }
 
