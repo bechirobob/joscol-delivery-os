@@ -300,22 +300,32 @@ input, select { width: 100%; border: 1px solid #dcdcdc; border-radius: var(--rad
 
 .dispatch-control-room {
   display: grid;
-  grid-template-columns: minmax(260px, .72fr) minmax(0, 1.16fr) minmax(280px, .88fr);
+  grid-template-columns: minmax(280px, .78fr) minmax(0, 1.14fr) minmax(280px, .86fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 .dispatch-summary {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.dispatch-summary .metric {
+  min-height: 82px;
   border: 1px solid var(--line);
   background: #fff;
 }
+.dispatch-summary .metric:last-child { border-right: 1px solid var(--line); }
 .dispatch-queue-card, .dispatch-mission-card, .dispatch-rider-card {
   min-width: 0;
+  height: min(720px, calc(100vh - 160px));
+  min-height: 620px;
   border: 1px solid var(--line);
   background: #fff;
   padding: clamp(14px, 2vw, 20px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .panel-title-row, .mission-head {
   display: flex;
@@ -326,7 +336,15 @@ input, select { width: 100%; border: 1px solid #dcdcdc; border-radius: var(--rad
 }
 .panel-title-row h2, .mission-head h2 { margin-bottom: 4px; }
 .panel-title-row > span, .mission-head p { color: var(--muted); font-weight: 850; margin: 0; }
-.control-queue-list, .rider-candidate-list { display: grid; gap: 8px; }
+.control-queue-list, .rider-candidate-list {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+.dispatch-mission-card { overflow: auto; }
 .control-ticket {
   width: 100%;
   display: grid;
@@ -338,6 +356,7 @@ input, select { width: 100%; border: 1px solid #dcdcdc; border-radius: var(--rad
   color: var(--ink);
   border: 1px solid var(--line);
   padding: 12px;
+  min-height: 122px;
 }
 .control-ticket.selected { border-color: var(--ink); box-shadow: inset 5px 0 0 var(--brand-red); }
 .ticket-main, .ticket-meta, .candidate-main { display: grid; gap: 3px; min-width: 0; }
@@ -385,19 +404,23 @@ input, select { width: 100%; border: 1px solid #dcdcdc; border-radius: var(--rad
   align-items: center;
   border: 1px solid var(--line);
   padding: 12px;
+  min-height: 148px;
 }
 .rider-candidate.assigned { border-color: var(--brand-red); box-shadow: inset 5px 0 0 var(--brand-red); }
 .rider-candidate button { grid-column: 1 / -1; min-height: 40px; }
 .rider-candidate .status { justify-self: end; }
 @media (max-width: 1100px) {
   .dispatch-control-room { grid-template-columns: minmax(260px, .8fr) minmax(0, 1.2fr); }
+  .dispatch-queue-card, .dispatch-mission-card, .dispatch-rider-card { height: auto; min-height: 0; }
   .dispatch-rider-card { grid-column: 1 / -1; }
-  .rider-candidate-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rider-candidate-list { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; padding-right: 0; }
 }
 @media (max-width: 760px) {
   .dispatch-control-room, .mission-grid, .dispatch-command-bar, .rider-candidate-list { grid-template-columns: 1fr; }
   .dispatch-summary { grid-template-columns: repeat(4, minmax(88px, 1fr)); overflow-x: auto; }
-  .control-ticket, .rider-candidate { grid-template-columns: 1fr; }
+  .dispatch-summary .metric { min-width: 88px; }
+  .control-queue-list { overflow: visible; padding-right: 0; }
+  .control-ticket, .rider-candidate { grid-template-columns: 1fr; min-height: 0; }
   .ticket-meta, .rider-candidate .status { justify-items: start; justify-self: start; }
 }
 .status { display: inline-flex; width: fit-content; border-radius: var(--radius); padding: 6px 9px; background: var(--soft-2); color: var(--ink); font-weight: 950; font-size: .7rem; text-transform: uppercase; white-space: nowrap; }
