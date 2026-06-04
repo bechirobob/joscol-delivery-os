@@ -139,8 +139,20 @@ function initialRoute(): AppRoute {
 
 function initialLocale(): Locale {
   if (typeof window === 'undefined') return 'es';
-  const saved = window.localStorage.getItem('joscol-locale');
-  return saved === 'en' ? 'en' : 'es';
+  try {
+    const saved = window.localStorage.getItem('joscol-locale');
+    return saved === 'en' ? 'en' : 'es';
+  } catch {
+    return 'es';
+  }
+}
+
+function persistLocale(locale: Locale) {
+  try {
+    window.localStorage.setItem('joscol-locale', locale);
+  } catch {
+    // Storage can be blocked by desktop privacy settings; language still updates for this session.
+  }
 }
 
 function App() {
@@ -186,7 +198,7 @@ function App() {
 
   useEffect(() => {
     document.documentElement.lang = locale;
-    window.localStorage.setItem('joscol-locale', locale);
+    persistLocale(locale);
   }, [locale]);
 
   useEffect(() => {

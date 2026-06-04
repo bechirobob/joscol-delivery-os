@@ -695,6 +695,7 @@ function currentIndexAsset(extension) {
 
 function cacheHeaders(filePath) {
   const ext = extname(filePath);
+  if (filePath.endsWith('/sw.js')) return { 'Cache-Control': 'no-store' };
   if (ext === '.html') return { 'Cache-Control': 'no-store' };
   if (filePath.includes('/assets/')) return { 'Cache-Control': 'public, max-age=31536000, immutable' };
   return { 'Cache-Control': 'public, max-age=300' };
@@ -714,7 +715,7 @@ function serveStatic(pathname, res) {
   if (!existsSync(filePath) && pathname.startsWith('/assets/')) return json(res, 404, { error: 'Asset not found' });
   if (!existsSync(filePath) && !pathname.startsWith('/api/')) filePath = join(DIST, 'index.html');
   if (!existsSync(filePath)) return json(res, 404, { error: 'Not found' });
-  const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png' };
+  const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json; charset=utf-8', '.ico': 'image/x-icon' };
   res.writeHead(200, { 'Content-Type': types[extname(filePath)] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', ...cacheHeaders(filePath) });
   createReadStream(filePath).pipe(res);
 }
