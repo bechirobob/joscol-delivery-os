@@ -352,7 +352,7 @@ function App() {
         <a className="brand" href={appRoute === 'staff' ? '/staff' : '#top'} onClick={(event) => { if (appRoute === 'staff') { event.preventDefault(); navigateApp('staff'); } }} aria-label="JOSCOL Delivery OS home"><img src={joscolLogo} alt="JOSCOL" /><small>{staffRole ? `${staffCredentialHints[staffRole].label} workspace` : appRoute === 'staff' ? 'Staff login' : t.product}</small></a>
         <div className="top-actions">
           {appRoute === 'staff' && staffRole ? <><span className="session-chip">{staffCredentialHints[staffRole].label}</span><button className="ghost logout-button" onClick={exitStaff} type="button">Logout</button></> : appRoute === 'staff' ? <button className="ghost" onClick={() => navigateApp('customer')} type="button">{locale === 'es' ? 'Cliente' : 'Customer'}</button> : <button className="ghost staff-link" onClick={() => navigateApp('staff')} type="button">Staff</button>}
-          <button className="locale-toggle" onClick={() => setLocale(locale === 'es' ? 'en' : 'es')} type="button">{locale === 'es' ? 'EN' : 'ES'}</button>
+          <button className="locale-toggle" aria-label={locale === 'es' ? 'Switch to English' : 'Cambiar a español'} title={locale === 'es' ? 'English' : 'Español'} onClick={() => setLocale(locale === 'es' ? 'en' : 'es')} type="button"><span className="flag-icon" aria-hidden="true">{locale === 'es' ? '🇬🇧' : '🇪🇸'}</span></button>
         </div>
       </header>
 

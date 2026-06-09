@@ -59,6 +59,7 @@ main { min-height: 100vh; max-width: 1120px; margin: 0 auto; padding: 14px clamp
 .brand img { width: 124px; height: auto; display: block; object-fit: contain; object-position: left center; }
 .brand small { color: var(--muted); font-weight: 850; margin-left: 2px; letter-spacing: -.02em; }
 .locale-toggle { background: var(--soft); color: var(--ink); padding: 10px 14px; }
+.flag-icon { display: inline-block; font-size: 1.15rem; line-height: 1; }
 .top-actions { display: flex; align-items: center; gap: 8px; }
 
 .workspace-rail {
