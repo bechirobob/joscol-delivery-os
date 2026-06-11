@@ -255,6 +255,15 @@ function validateOrder(input) {
   return order;
 }
 
+function validateCustomerSupport(input, order) {
+  const phoneSuffix = clean(input.phoneSuffix, 12).replace(/\D/g, '');
+  const note = clean(input.note, 260);
+  const orderDigits = String(order.phone || '').replace(/\D/g, '');
+  if (orderDigits && (!phoneSuffix || !orderDigits.endsWith(phoneSuffix))) throw httpError(403, 'Phone confirmation does not match this order');
+  if (!note || note.length < 6) throw httpError(400, 'Support note is too short');
+  return { phoneSuffix, note };
+}
+
 function makeOrder(form, forcedId, forcedStatus = 'received', riderId) {
   const id = forcedId ?? `JSC-${Date.now().toString().slice(-6)}`;
   const order = {
@@ -659,6 +668,27 @@ async function route(req, res) {
       const id = decodeURIComponent(url.pathname.split('/').pop() || '').trim().toLowerCase();
       const state = await readState();
       return json(res, 200, { order: safeTracking(state.orders.find((order) => order.id.toLowerCase() === id), state.riders) });
+    }
+    if (url.pathname.startsWith('/api/track/') && url.pathname.endsWith('/support') && req.method === 'POST') {
+      const [, , , rawId] = url.pathname.split('/');
+      const id = decodeURIComponent(rawId || '').trim().toLowerCase();
+      const payload = await body(req);
+      let updatedOrder;
+      const state = await mutate((current) => {
+        const order = current.orders.find((candidate) => candidate.id.toLowerCase() === id);
+        if (!order) throw httpError(404, 'Order not found');
+        if (order.status === 'delivered') throw httpError(400, 'Delivered orders are already closed; contact JOSCOL by phone for after-delivery support');
+        const support = validateCustomerSupport(payload, order);
+        current.orders = current.orders.map((candidate) => {
+          if (candidate.id !== order.id) return candidate;
+          const note = `Customer requested support: ${support.note}`;
+          updatedOrder = addEvent({ ...candidate, status: 'exception', notes: candidate.notes ? `${candidate.notes} | Support: ${support.note}` : `Support: ${support.note}` }, 'customer', note);
+          return updatedOrder;
+        });
+        current.selectedOrderId = order.id;
+        return current;
+      });
+      return json(res, 200, { order: safeTracking(updatedOrder, state.riders) });
     }
     if (url.pathname === '/api/payments/checkout' && req.method === 'POST') {
       const payload = await body(req);

@@ -290,6 +290,22 @@ function App() {
     }
   }
 
+  async function reportCustomerIssue(orderId: string, payload: { phoneSuffix: string; note: string }) {
+    setBusy(true);
+    try {
+      const result = await api<{ order: Order }>(`/api/track/${encodeURIComponent(orderId)}/support`, { method: 'POST', body: JSON.stringify(payload) });
+      setTrackedOrder(result.order);
+      setTrackingId(result.order.id);
+      setCustomerTab('track');
+      setMessage(locale === 'es' ? `${result.order.id} enviado a soporte.` : `${result.order.id} sent to support.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Support request failed.');
+      throw error;
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function mutate(path: string, body?: unknown, success?: (next: AppState) => string) {
     setBusy(true);
     try {
@@ -356,7 +372,7 @@ function App() {
         </div>
       </header>
 
-      {appRoute === 'customer' && !staffRole && <CustomerShell locale={locale} customerTab={customerTab} setCustomerTab={setCustomerTab} form={form} setForm={setForm} quote={quote} createOrder={createOrder} trackingId={trackingId} setTrackingId={setTrackingId} trackedOrder={trackedOrder} lookupTracking={lookupTracking} busy={busy} />}
+      {appRoute === 'customer' && !staffRole && <CustomerShell locale={locale} customerTab={customerTab} setCustomerTab={setCustomerTab} form={form} setForm={setForm} quote={quote} createOrder={createOrder} trackingId={trackingId} setTrackingId={setTrackingId} trackedOrder={trackedOrder} lookupTracking={lookupTracking} reportCustomerIssue={reportCustomerIssue} busy={busy} />}
 
       {appRoute === 'staff' && !staffRole && <StaffLoginPage locale={locale} loginForm={loginForm} setLoginForm={setLoginForm} openStaff={enterStaff} busy={busy} />}
 
@@ -385,7 +401,7 @@ function App() {
   );
 }
 
-function CustomerShell({ locale, customerTab, setCustomerTab, form, setForm, quote, createOrder, trackingId, setTrackingId, trackedOrder, lookupTracking, busy }: { locale: Locale; customerTab: CustomerTab; setCustomerTab: (tab: CustomerTab) => void; form: OrderForm; setForm: (next: OrderForm) => void; quote: number; createOrder: (event: FormEvent) => void; trackingId: string; setTrackingId: (id: string) => void; trackedOrder?: Order; lookupTracking: () => Promise<void>; busy: boolean }) {
+function CustomerShell({ locale, customerTab, setCustomerTab, form, setForm, quote, createOrder, trackingId, setTrackingId, trackedOrder, lookupTracking, reportCustomerIssue, busy }: { locale: Locale; customerTab: CustomerTab; setCustomerTab: (tab: CustomerTab) => void; form: OrderForm; setForm: (next: OrderForm) => void; quote: number; createOrder: (event: FormEvent) => void; trackingId: string; setTrackingId: (id: string) => void; trackedOrder?: Order; lookupTracking: () => Promise<void>; reportCustomerIssue: (orderId: string, payload: { phoneSuffix: string; note: string }) => Promise<void>; busy: boolean }) {
   const t = copy[locale];
   return <>
     <section className="command-hero customer-hero">
@@ -399,8 +415,8 @@ function CustomerShell({ locale, customerTab, setCustomerTab, form, setForm, quo
     <nav className="customer-tabs" aria-label="Customer actions"><button className={customerTab === 'customer' ? 'active' : ''} onClick={() => setCustomerTab('customer')} type="button"><DeliveryIcon />{t.nav.customer}</button><button className={customerTab === 'track' || customerTab === 'receipt' ? 'active' : ''} onClick={() => setCustomerTab('track')} type="button"><PinIcon />{t.nav.track}</button></nav>
     <section className="module-shell">
       {customerTab === 'customer' && <CustomerModule form={form} setForm={setForm} quote={quote} createOrder={createOrder} locale={locale} busy={busy} />}
-      {customerTab === 'receipt' && <OrderReceiptModule locale={locale} order={trackedOrder} setCustomerTab={setCustomerTab} />}
-      {customerTab === 'track' && <TrackingModule locale={locale} trackingId={trackingId} setTrackingId={setTrackingId} order={trackedOrder} lookupTracking={lookupTracking} busy={busy} />}
+      {customerTab === 'receipt' && <OrderReceiptModule locale={locale} order={trackedOrder} setCustomerTab={setCustomerTab} reportCustomerIssue={reportCustomerIssue} busy={busy} />}
+      {customerTab === 'track' && <TrackingModule locale={locale} trackingId={trackingId} setTrackingId={setTrackingId} order={trackedOrder} lookupTracking={lookupTracking} reportCustomerIssue={reportCustomerIssue} busy={busy} />}
     </section>
   </>;
 }
@@ -418,13 +434,13 @@ function CustomerModule({ form, setForm, quote, createOrder, locale, busy }: { f
   return <div className="workbench customer-workbench"><form className="order-sheet" onSubmit={createOrder}><div className="order-headline"><div><p className="eyebrow">{copy[locale].orderForm}</p><h2>{locale === 'es' ? 'Pide una entrega' : 'Request a delivery'}</h2></div><div className="service-chips" aria-label={locale === 'es' ? 'Tipos de pedido rápido' : 'Quick order types'}><button className="service-chip" type="button" onClick={() => applyPreset('food')}><DeliveryIcon />Food</button><button className="service-chip" type="button" onClick={() => applyPreset('market')}><GridIcon />Market</button><button className="service-chip" type="button" onClick={() => applyPreset('docs')}><PinIcon />Docs</button></div></div><div className="route-inputs"><label>{locale === 'es' ? 'Recoger' : 'Pickup'}<input required value={form.pickup} onChange={(e) => setForm({ ...form, pickup: e.target.value })} placeholder="Restaurante / tienda / oficina" /></label><span aria-hidden="true" /><label>{locale === 'es' ? 'Entregar' : 'Dropoff'}<input required value={form.dropoff} onChange={(e) => setForm({ ...form, dropoff: e.target.value })} placeholder="Dirección de entrega" /></label></div><div className="field-grid compact-fields"><label>{locale === 'es' ? 'Cliente' : 'Customer'}<input autoComplete="name" required value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} placeholder="Claudia Nsue" /></label><label>WhatsApp<input autoComplete="tel" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+240 555 000 000" /></label><label>{locale === 'es' ? 'Pedido' : 'Item'}<input required value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} placeholder="Comida, documentos, compra..." /></label><label>{locale === 'es' ? 'Zona' : 'Zone'}<select value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })}>{zones.map((zone) => <option key={zone}>{zone}</option>)}</select></label><label>{locale === 'es' ? 'Prioridad' : 'Priority'}<select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as Priority })}><option value="standard">Standard</option><option value="urgent">Urgent</option></select></label><label>{locale === 'es' ? 'Notas' : 'Notes'}<input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Pago, referencia, instrucciones" /></label></div><div className="bottom-action"><span>{locale === 'es' ? 'Precio estimado' : 'Estimated price'}<strong>{quote.toLocaleString('es-GQ')} XAF</strong></span><button disabled={busy} type="submit">{locale === 'es' ? 'Pedir ahora' : 'Order now'}</button></div></form></div>;
 }
 
-function OrderReceiptModule({ locale, order, setCustomerTab }: { locale: Locale; order?: Order; setCustomerTab: (tab: CustomerTab) => void }) {
+function OrderReceiptModule({ locale, order, setCustomerTab, reportCustomerIssue, busy }: { locale: Locale; order?: Order; setCustomerTab: (tab: CustomerTab) => void; reportCustomerIssue: (orderId: string, payload: { phoneSuffix: string; note: string }) => Promise<void>; busy: boolean }) {
   if (!order) return <div className="workbench receipt-workbench"><p className="empty-state">{locale === 'es' ? 'Pedido creado, pero no se cargó el recibo.' : 'Order created, but the receipt did not load.'}</p><button type="button" onClick={() => setCustomerTab('track')}>{locale === 'es' ? 'Ir a tracking' : 'Go to tracking'}</button></div>;
-  return <div className="workbench receipt-workbench"><section className="receipt-panel" aria-labelledby="receipt-title"><p className="eyebrow">{locale === 'es' ? 'Pedido confirmado' : 'Order confirmed'}</p><h2 id="receipt-title">{locale === 'es' ? 'Tu pedido está en despacho' : 'Your order is with dispatch'}</h2><div className="receipt-id"><span>{locale === 'es' ? 'Código de seguimiento' : 'Tracking code'}</span><strong>{order.id}</strong></div><p>{locale === 'es' ? 'Sigue el pedido aquí. Cuando despacho asigne rider, este panel cambia de estado y muestra el progreso.' : 'Track the order here. When dispatch assigns a rider, this panel updates with progress.'}</p><div className="receipt-actions"><button type="button" onClick={() => setCustomerTab('track')}>{locale === 'es' ? 'Buscar otro pedido' : 'Look up another order'}</button><button className="ghost" type="button" onClick={() => setCustomerTab('customer')}>{locale === 'es' ? 'Nuevo pedido' : 'New order'}</button></div></section><TrackingSheet locale={locale} order={order} /></div>;
+  return <div className="workbench receipt-workbench"><section className="receipt-panel" aria-labelledby="receipt-title"><p className="eyebrow">{locale === 'es' ? 'Pedido confirmado' : 'Order confirmed'}</p><h2 id="receipt-title">{locale === 'es' ? 'Tu pedido está en despacho' : 'Your order is with dispatch'}</h2><div className="receipt-id"><span>{locale === 'es' ? 'Código de seguimiento' : 'Tracking code'}</span><strong>{order.id}</strong></div><p>{locale === 'es' ? 'Sigue el pedido aquí. Cuando despacho asigne rider, este panel cambia de estado y muestra el progreso.' : 'Track the order here. When dispatch assigns a rider, this panel updates with progress.'}</p><div className="receipt-actions"><button type="button" onClick={() => setCustomerTab('track')}>{locale === 'es' ? 'Buscar otro pedido' : 'Look up another order'}</button><button className="ghost" type="button" onClick={() => setCustomerTab('customer')}>{locale === 'es' ? 'Nuevo pedido' : 'New order'}</button></div></section><TrackingSheet locale={locale} order={order} reportIssue={reportCustomerIssue} busy={busy} /></div>;
 }
 
-function TrackingModule({ locale, trackingId, setTrackingId, order, lookupTracking, busy }: { locale: Locale; trackingId: string; setTrackingId: (id: string) => void; order?: Order; lookupTracking: () => Promise<void>; busy: boolean }) {
-  return <div className="tracking-workspace"><section className="lookup-card"><div><p className="eyebrow">{copy[locale].tracking}</p><h2>{locale === 'es' ? 'Sigue tu entrega' : 'Track your delivery'}</h2><p>{locale === 'es' ? 'Introduce tu código JSC para ver estado, rider y ruta.' : 'Enter your JSC code to see status, rider, and route.'}</p></div><div className="lookup-row"><label>{locale === 'es' ? 'ID de pedido' : 'Order ID'}<input value={trackingId} onChange={(e) => setTrackingId(e.target.value)} placeholder="JSC-2401" /></label><button disabled={busy || !trackingId.trim()} onClick={() => void lookupTracking()} type="button">{locale === 'es' ? 'Consultar' : 'Look up'}</button></div></section>{order ? <div className="tracking-layout"><TrackingSheet locale={locale} order={order} /><TimelinePanel locale={locale} order={order} /></div> : <div className="empty-tracker"><PinIcon /><strong>{locale === 'es' ? 'Todavía no hay pedido seleccionado' : 'No order selected yet'}</strong><span>{locale === 'es' ? 'Busca un código o crea un pedido para ver el seguimiento.' : 'Look up a code or create an order to view tracking.'}</span></div>}</div>;
+function TrackingModule({ locale, trackingId, setTrackingId, order, lookupTracking, reportCustomerIssue, busy }: { locale: Locale; trackingId: string; setTrackingId: (id: string) => void; order?: Order; lookupTracking: () => Promise<void>; reportCustomerIssue: (orderId: string, payload: { phoneSuffix: string; note: string }) => Promise<void>; busy: boolean }) {
+  return <div className="tracking-workspace"><section className="lookup-card"><div><p className="eyebrow">{copy[locale].tracking}</p><h2>{locale === 'es' ? 'Sigue tu entrega' : 'Track your delivery'}</h2><p>{locale === 'es' ? 'Introduce tu código JSC para ver estado, rider y ruta.' : 'Enter your JSC code to see status, rider, and route.'}</p></div><div className="lookup-row"><label>{locale === 'es' ? 'ID de pedido' : 'Order ID'}<input value={trackingId} onChange={(e) => setTrackingId(e.target.value)} placeholder="JSC-2401" /></label><button disabled={busy || !trackingId.trim()} onClick={() => void lookupTracking()} type="button">{locale === 'es' ? 'Consultar' : 'Look up'}</button></div></section>{order ? <div className="tracking-layout"><TrackingSheet locale={locale} order={order} reportIssue={reportCustomerIssue} busy={busy} /><TimelinePanel locale={locale} order={order} /></div> : <div className="empty-tracker"><PinIcon /><strong>{locale === 'es' ? 'Todavía no hay pedido seleccionado' : 'No order selected yet'}</strong><span>{locale === 'es' ? 'Busca un código o crea un pedido para ver el seguimiento.' : 'Look up a code or create an order to view tracking.'}</span></div>}</div>;
 }
 
 function statusStepIndex(status: OrderStatus) {
@@ -436,14 +452,35 @@ function statusStepIndex(status: OrderStatus) {
   return 1;
 }
 
-function TrackingSheet({ locale, order, rider, compact = false }: { locale: Locale; order?: Order; rider?: Rider; compact?: boolean }) {
+function TrackingSheet({ locale, order, rider, compact = false, reportIssue, busy = false }: { locale: Locale; order?: Order; rider?: Rider; compact?: boolean; reportIssue?: (orderId: string, payload: { phoneSuffix: string; note: string }) => Promise<void>; busy?: boolean }) {
   if (!order) return <div className="tracking-sheet"><p className="empty-state">No orders yet.</p></div>;
   const orderRider = rider ? `${rider.name} · ${rider.vehicle}` : order.rider ? `${order.rider.name} · ${order.rider.vehicle}` : locale === 'es' ? 'Buscando rider' : 'Finding rider';
   const progress = routeProgress(order, rider);
   const step = statusStepIndex(order.status);
   const steps = locale === 'es' ? ['Pedido', 'Rider', 'Recogida', 'Camino', 'Entregado'] : ['Order', 'Rider', 'Pickup', 'On way', 'Delivered'];
   const live = Boolean(rider?.location?.sharing || order.riderLocation?.sharing);
-  return <article className={`tracking-sheet customer-tracker ${compact ? 'compact' : ''}`}><div className="tracker-hero"><div><span className={`status ${order.status}`}>{statusText[locale][order.status]}</span><h2>{order.status === 'delivered' ? (locale === 'es' ? 'Entregado' : 'Delivered') : locale === 'es' ? `Llega en ${order.eta} min` : `Arrives in ${order.eta} min`}</h2><p>{order.pickup} → {order.dropoff}</p></div><div className="tracker-code"><span>{order.id}</span><strong>{order.price.toLocaleString('es-GQ')} XAF</strong></div></div><DeliveryMap locale={locale} order={order} rider={rider} /><div className="tracker-steps" aria-label={locale === 'es' ? 'Progreso de entrega' : 'Delivery progress'}>{steps.map((label, index) => <span key={label} className={index <= step ? 'done' : ''}><b>{index + 1}</b>{label}</span>)}</div><div className="tracker-details"><section><small>{locale === 'es' ? 'Rider' : 'Courier'}</small><strong>{orderRider}</strong><p>{live ? (locale === 'es' ? 'GPS compartido por el rider' : 'GPS shared by rider') : (locale === 'es' ? 'GPS pendiente de consentimiento del rider' : 'GPS pending rider consent')}</p></section><section><small>{locale === 'es' ? 'Pedido' : 'Item'}</small><strong>{order.item}</strong><p>{locale === 'es' ? 'WhatsApp disponible para soporte si el cliente dejó número.' : 'WhatsApp support is available when a phone number exists.'}</p></section></div><div className="route-line" aria-label={`Route progress ${progress}%`}><span style={{ width: `${progress}%` }} /></div>{order.phone && <div className="action-row"><a href={`https://wa.me/${order.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">WhatsApp</a></div>}</article>;
+  return <article className={`tracking-sheet customer-tracker ${compact ? 'compact' : ''}`}><div className="tracker-hero"><div><span className={`status ${order.status}`}>{statusText[locale][order.status]}</span><h2>{order.status === 'delivered' ? (locale === 'es' ? 'Entregado' : 'Delivered') : order.status === 'exception' ? (locale === 'es' ? 'Soporte revisando' : 'Support reviewing') : locale === 'es' ? `Llega en ${order.eta} min` : `Arrives in ${order.eta} min`}</h2><p>{order.pickup} → {order.dropoff}</p></div><div className="tracker-code"><span>{order.id}</span><strong>{order.price.toLocaleString('es-GQ')} XAF</strong></div></div><DeliveryMap locale={locale} order={order} rider={rider} /><div className="tracker-steps" aria-label={locale === 'es' ? 'Progreso de entrega' : 'Delivery progress'}>{steps.map((label, index) => <span key={label} className={index <= step ? 'done' : ''}><b>{index + 1}</b>{label}</span>)}</div><div className="tracker-details"><section><small>{locale === 'es' ? 'Rider' : 'Courier'}</small><strong>{orderRider}</strong><p>{live ? (locale === 'es' ? 'GPS compartido por el rider' : 'GPS shared by rider') : (locale === 'es' ? 'GPS pendiente de consentimiento del rider' : 'GPS pending rider consent')}</p></section><section><small>{locale === 'es' ? 'Pedido' : 'Item'}</small><strong>{order.item}</strong><p>{locale === 'es' ? 'WhatsApp disponible para soporte si el cliente dejó número.' : 'WhatsApp support is available when a phone number exists.'}</p></section></div><div className="route-line" aria-label={`Route progress ${progress}%`}><span style={{ width: `${progress}%` }} /></div>{order.phone && <div className="action-row"><a href={`https://wa.me/${order.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">WhatsApp</a></div>}{reportIssue && !compact && order.status !== 'delivered' && <CustomerSupportForm locale={locale} order={order} reportIssue={reportIssue} busy={busy} />}</article>;
+}
+
+function CustomerSupportForm({ locale, order, reportIssue, busy }: { locale: Locale; order: Order; reportIssue: (orderId: string, payload: { phoneSuffix: string; note: string }) => Promise<void>; busy: boolean }) {
+  const [open, setOpen] = useState(order.status === 'exception');
+  const [phoneSuffix, setPhoneSuffix] = useState('');
+  const [note, setNote] = useState('');
+  const [localMessage, setLocalMessage] = useState('');
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setLocalMessage('');
+    try {
+      await reportIssue(order.id, { phoneSuffix, note });
+      setOpen(false);
+      setPhoneSuffix('');
+      setNote('');
+    } catch (error) {
+      setLocalMessage(error instanceof Error ? error.message : 'Support request failed.');
+    }
+  };
+  if (!open) return <div className="support-request"><button className="danger" type="button" onClick={() => setOpen(true)}>{locale === 'es' ? 'Pedir ayuda con este pedido' : 'Report an issue with this order'}</button></div>;
+  return <form className="support-request support-request-form" onSubmit={submit}><div><strong>{locale === 'es' ? 'Soporte JOSCOL' : 'JOSCOL support'}</strong><span>{locale === 'es' ? 'Confirma los últimos dígitos de tu WhatsApp y explica el problema.' : 'Confirm the last digits of your WhatsApp and explain the issue.'}</span></div><label>{locale === 'es' ? 'Últimos dígitos WhatsApp' : 'Last WhatsApp digits'}<input inputMode="numeric" autoComplete="tel" value={phoneSuffix} onChange={(event) => setPhoneSuffix(event.target.value)} placeholder="0331" required /></label><label>{locale === 'es' ? '¿Qué pasó?' : 'What happened?'}<textarea value={note} onChange={(event) => setNote(event.target.value)} minLength={6} maxLength={260} placeholder={locale === 'es' ? 'Ej: rider no llegó, dirección cambió...' : 'Example: rider has not arrived, address changed...'} required /></label>{localMessage && <p role="alert">{localMessage}</p>}<div className="support-request-actions"><button disabled={busy || phoneSuffix.replace(/\D/g, '').length < 2 || note.trim().length < 6} type="submit">{locale === 'es' ? 'Enviar a soporte' : 'Send to support'}</button><button className="ghost" disabled={busy} type="button" onClick={() => setOpen(false)}>{locale === 'es' ? 'Cancelar' : 'Cancel'}</button></div></form>;
 }
 
 function TimelinePanel({ locale, order }: { locale: Locale; order?: Order }) { return <div className="timeline-panel"><p className="eyebrow">Timeline</p><h2>{order ? order.id : locale === 'es' ? 'Sin pedido' : 'No order'}</h2><ol className="timeline">{order?.timeline.map((event, index) => <li key={`${event.at}-${index}`}><strong>{event.label}</strong><span>{event.actor ? `${event.actor} · ` : ''}{new Date(event.at).toLocaleString(locale === 'es' ? 'es-GQ' : 'en-US')}</span></li>)}</ol></div>; }

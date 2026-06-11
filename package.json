@@ -11,11 +11,12 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "npm run lint && npm run build",
-    "test:smoke": "npm run smoke:auth && npm run smoke:roles && npm run smoke:gps",
+    "test:smoke": "npm run smoke:auth && npm run smoke:support && npm run smoke:roles && npm run smoke:gps",
     "test:all": "npm test && npm run test:smoke",
     "preview": "vite preview --host 127.0.0.1",
     "start": "node server/index.js",
     "smoke:auth": "node scripts/smoke-auth-session.mjs",
+    "smoke:support": "node scripts/smoke-customer-support.mjs",
     "smoke:roles": "node scripts/smoke-role-separation.mjs",
     "smoke:gps": "node scripts/smoke-location-jutsus.mjs"
   },
